@@ -1,0 +1,5 @@
+{
+   "name": "AI Well Plate Analyzer",
+   "description": "An advanced application to analyze 96-well culture plate images. Users can upload images, calibrate the well grid, and get detailed quantitative analysis based on color intensity. Features dark mode, mobile optimization, and comprehensive result visualization. Developed by Sowmya & Anusha.",
+   "requestFramePermissions": []
+}

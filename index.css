@@ -1,0 +1,163 @@
+/* Base styles for the application */
+
+/* Apply better default styles */
+* {
+   box-sizing: border-box;
+   margin: 0;
+   padding: 0;
+}
+
+/* System color theme transitions */
+body {
+   transition: background-color 0.3s ease, color 0.3s ease;
+   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+      Arial, sans-serif;
+   -webkit-font-smoothing: antialiased;
+   -moz-osx-font-smoothing: grayscale;
+   line-height: 1.5;
+}
+
+/* Responsive image handling */
+img {
+   max-width: 100%;
+   height: auto;
+}
+
+/* Tailwind is loaded from CDN in index.html, so we just need minimal custom styles */
+
+/* Accessible focus indicators */
+:focus {
+   outline: 2px solid #4f46e5;
+   outline-offset: 2px;
+}
+
+/* Force dark mode for users with dark mode preferences */
+@media (prefers-color-scheme: dark) {
+   html.dark-theme {
+      color-scheme: dark;
+   }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+   width: 8px;
+   height: 8px;
+}
+
+::-webkit-scrollbar-track {
+   background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+   background: rgba(0, 0, 0, 0.2);
+   border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+   background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+   ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+   }
+
+   ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+   }
+
+   ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+   }
+}
+
+/* Mobile optimization */
+@media (max-width: 640px) {
+   body {
+      font-size: 15px;
+   }
+
+   /* Tighter spacing on mobile */
+   .p-8 {
+      padding: 1.25rem !important;
+   }
+
+   .p-6 {
+      padding: 1rem !important;
+   }
+
+   /* Smaller text on mobile */
+   h1,
+   h2,
+   h3 {
+      line-height: 1.3;
+   }
+
+   /* Improved touch targets */
+   button,
+   [role="button"],
+   input[type="button"],
+   input[type="submit"],
+   input[type="reset"] {
+      min-height: 44px;
+      padding: 0.5rem 0.75rem;
+   }
+
+   /* Prevent text zoom issues on mobile */
+   input,
+   textarea,
+   select,
+   button {
+      font-size: 16px; /* Prevents zoom on iOS */
+   }
+}
+
+/* Animation for theme switch */
+.dark-mode-transition {
+   transition: background-color 0.3s ease, color 0.3s ease,
+      border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Smooth fade transitions */
+.fade-in {
+   animation: fadeIn 0.3s ease-in forwards;
+}
+
+@keyframes fadeIn {
+   from {
+      opacity: 0;
+   }
+   to {
+      opacity: 1;
+   }
+}
+
+/* Better button styling */
+button {
+   transition: all 0.2s ease;
+}
+
+button:active {
+   transform: scale(0.98);
+}
+
+/* Improved focus visibility for accessibility */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+   outline: 2px solid #3b82f6;
+   outline-offset: 2px;
+}
+
+/* Ensure dark mode is properly applied */
+html.dark {
+   color-scheme: dark;
+}
+
+.dark body {
+   background-color: #111827;
+   color: #f9fafb;
+}
