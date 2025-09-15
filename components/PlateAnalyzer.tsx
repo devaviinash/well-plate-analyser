@@ -14,6 +14,11 @@ interface PlateAnalyzerProps {
    onCancel: () => void;
 }
 
+interface RectangleSelection {
+   startPoint: Point;
+   endPoint: Point;
+}
+
 export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
    imageFile,
    onAnalysisComplete,
@@ -28,6 +33,12 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
    const [maxColor, setMaxColor] = useState<Point | null>(null);
 
    const [crosshair, setCrosshair] = useState<Point | null>(null);
+   // Rectangle selection state
+   const [isSelecting, setIsSelecting] = useState<boolean>(false);
+   const [selectionRect, setSelectionRect] =
+      useState<RectangleSelection | null>(null);
+   const [justCompletedSelection, setJustCompletedSelection] =
+      useState<boolean>(false);
    const imageRef = useRef<HTMLImageElement>(null);
 
    useEffect(() => {
@@ -37,6 +48,16 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
          return () => URL.revokeObjectURL(url);
       }
    }, [imageFile]);
+
+   // Reset justCompletedSelection flag after a short delay
+   useEffect(() => {
+      if (justCompletedSelection) {
+         const timer = setTimeout(() => {
+            setJustCompletedSelection(false);
+         }, 300); // 300ms should be enough to prevent accidental clicks
+         return () => clearTimeout(timer);
+      }
+   }, [justCompletedSelection]);
 
    const getRelativeCoords = (e: React.MouseEvent<HTMLImageElement>): Point => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -58,34 +79,121 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
       };
    };
 
+   const getSelectionCenter = (selection: RectangleSelection): Point => {
+      return {
+         x: (selection.startPoint.x + selection.endPoint.x) / 2,
+         y: (selection.startPoint.y + selection.endPoint.y) / 2,
+      };
+   };
+
    const handleClick = (e: React.MouseEvent<HTMLImageElement>) => {
-      const coords = getRelativeCoords(e);
-      switch (step) {
-         case "a1":
-            setA1(coords);
-            setStep("h6");
-            break;
-         case "h6":
-            setH6(coords);
-            setStep("minColor");
-            break;
-         case "minColor":
-            setMinColor(coords);
-            setStep("maxColor");
-            break;
-         case "maxColor":
-            setMaxColor(coords);
-            setStep("done");
-            break;
+      // If we just completed a rectangle selection, ignore this click
+      if (justCompletedSelection) {
+         setJustCompletedSelection(false);
+         return;
+      }
+
+      // Only handle single click if we're not in the middle of a rectangle selection
+      if (!isSelecting && !selectionRect) {
+         const coords = getRelativeCoords(e);
+         switch (step) {
+            case "a1":
+               setA1(coords);
+               setStep("h6");
+               break;
+            case "h6":
+               setH6(coords);
+               setStep("minColor");
+               break;
+            case "minColor":
+               setMinColor(coords);
+               setStep("maxColor");
+               break;
+            case "maxColor":
+               setMaxColor(coords);
+               setStep("done");
+               break;
+         }
+      }
+   };
+
+   const handleMouseDown = (e: React.MouseEvent<HTMLImageElement>) => {
+      // Prevent default browser drag behavior
+      e.preventDefault();
+
+      // Start rectangle selection
+      if (step !== "done") {
+         const coords = getRelativeCoords(e);
+         setIsSelecting(true);
+         setSelectionRect({
+            startPoint: coords,
+            endPoint: coords,
+         });
       }
    };
 
    const handleMouseMove = (e: React.MouseEvent<HTMLImageElement>) => {
-      setCrosshair(getRelativeCoords(e));
+      // Prevent default browser behavior when selecting
+      if (isSelecting) {
+         e.preventDefault();
+      }
+
+      const coords = getRelativeCoords(e);
+      setCrosshair(coords);
+
+      // Update rectangle selection if we're in selection mode
+      if (isSelecting && selectionRect) {
+         setSelectionRect({
+            ...selectionRect,
+            endPoint: coords,
+         });
+      }
+   };
+
+   const handleMouseUp = (e: React.MouseEvent<HTMLImageElement>) => {
+      // Complete the rectangle selection
+      if (isSelecting && selectionRect) {
+         // Set the flag to prevent the click event from triggering
+         setJustCompletedSelection(true);
+
+         // Calculate the center point of the selection
+         const centerPoint = getSelectionCenter(selectionRect);
+
+         // Update the appropriate state based on current step
+         switch (step) {
+            case "a1":
+               setA1(centerPoint);
+               setStep("h6");
+               break;
+            case "h6":
+               setH6(centerPoint);
+               setStep("minColor");
+               break;
+            case "minColor":
+               setMinColor(centerPoint);
+               setStep("maxColor");
+               break;
+            case "maxColor":
+               setMaxColor(centerPoint);
+               setStep("done");
+               break;
+         }
+
+         // Reset selection state
+         setIsSelecting(false);
+         setSelectionRect(null);
+      }
    };
 
    const handleMouseLeave = () => {
       setCrosshair(null);
+      // Cancel selection if mouse leaves the image
+      if (isSelecting) {
+         setIsSelecting(false);
+         setSelectionRect(null);
+      }
+      // Also reset the justCompletedSelection flag
+      setJustCompletedSelection(false);
    };
 
    const handleAnalyze = () => {
@@ -105,6 +213,9 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
       setMinColor(null);
       setMaxColor(null);
       setStep("a1");
+      setIsSelecting(false);
+      setSelectionRect(null);
+      setJustCompletedSelection(false);
    };
 
    const getDotStyle = (point: Point | null): React.CSSProperties => {
@@ -130,27 +241,56 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
       };
    };
 
+   const getSelectionRectStyle = (): React.CSSProperties => {
+      if (!selectionRect) return { display: "none" };
+
+      // Calculate dimensions and position
+      const left = Math.min(
+         selectionRect.startPoint.x,
+         selectionRect.endPoint.x
+      );
+      const top = Math.min(
+         selectionRect.startPoint.y,
+         selectionRect.endPoint.y
+      );
+      const width = Math.abs(
+         selectionRect.endPoint.x - selectionRect.startPoint.x
+      );
+      const height = Math.abs(
+         selectionRect.endPoint.y - selectionRect.startPoint.y
+      );
+
+      return {
+         position: "absolute",
+         left: `${left}px`,
+         top: `${top}px`,
+         width: `${width}px`,
+         height: `${height}px`,
+         pointerEvents: "none",
+      };
+   };
+
    // More detailed instructions for each step
    const instructions = {
       a1: {
          title: "Step 1: Mark Well A1",
          description:
-            "Click on the center of well A1 (top-left corner of plate)",
+            "Click on the center of well A1 (top-left corner of plate) or click and drag to select an area",
       },
       h6: {
          title: "Step 2: Mark Well H6",
          description:
-            "Click on the center of well H6 (bottom-right of the 6-column section)",
+            "Click on the center of well H6 (bottom-right of the 6-column section) or click and drag to select an area",
       },
       minColor: {
          title: "Step 3: Select Minimum Density",
          description:
-            "Click a well representing 0% density (typically blue/clear)",
+            "Click a well representing 0% density (typically blue/clear) or click and drag to select an area",
       },
       maxColor: {
          title: "Step 4: Select Maximum Density",
          description:
-            "Click a well representing 100% density (typically dark pink/purple)",
+            "Click a well representing 100% density (typically dark pink/purple) or click and drag to select an area",
       },
       done: {
          title: "Ready to Analyze",
@@ -201,15 +341,22 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
          <div
             className="relative flex justify-center items-center border rounded-lg overflow-hidden shadow-md cursor-crosshair w-full"
             onMouseLeave={handleMouseLeave}
+            onDragStart={(e) => e.preventDefault()}
          >
-            <div className="relative inline-block">
+            <div
+               className="relative inline-block"
+               onDragStart={(e) => e.preventDefault()}
+            >
                <img
                   ref={imageRef}
                   src={imageUrl}
                   alt="Well Plate"
                   onClick={handleClick}
+                  onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
                   className="block max-h-[60vh]"
+                  draggable="false"
                />
 
                {a1 && (
@@ -251,6 +398,14 @@ export const PlateAnalyzer: React.FC<PlateAnalyzerProps> = ({
                         style={{ top: `${crosshair.y}px` }}
                      ></div>
                   </div>
+               )}
+
+               {/* Selection Rectangle */}
+               {isSelecting && selectionRect && (
+                  <div
+                     style={getSelectionRectStyle()}
+                     className="border-2 border-yellow-400 bg-yellow-200 bg-opacity-20 rounded-sm"
+                  ></div>
                )}
             </div>
          </div>
